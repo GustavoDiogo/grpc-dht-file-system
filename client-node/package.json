@@ -1,0 +1,32 @@
+{
+  "name": "client-node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon --watch 'src/' --exec 'ts-node src/index.ts' -e ts,js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ufabc-bcc/2024-q2-sistemas-distribuidos-projeto-01-gustavo-renan.git"
+  },
+  "keywords": [
+    "grpc",
+    "client",
+    "node"
+  ],
+  "author": "Gustavo & Renan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ufabc-bcc/2024-q2-sistemas-distribuidos-projeto-01-gustavo-renan/issues"
+  },
+  "homepage": "https://github.com/ufabc-bcc/2024-q2-sistemas-distribuidos-projeto-01-gustavo-renan#readme",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.11.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.1.0",
+    "typescript": "^5.5.4"
+  }
+}
