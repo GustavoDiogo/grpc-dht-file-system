@@ -1,5 +1,5 @@
-import { DHTNode as Node } from './apis/dhtGRPC'; // Supondo que o código Node e gRPC Server estejam em node.ts
-import { startServer } from './server'; // Supondo que o código startServer esteja em server.ts
+import { DHTNode as Node } from './apis/dhtGRPC';
+import { startServer } from './server';
 import { DHTClient } from './client';
 import fs from 'fs';
 
