@@ -1,7 +1,6 @@
 {
-  "name": "2024-q2-sistemas-distribuidos-projeto-01-gustavo-renan",
+  "name": "grpc-dht-app",
   "version": "1.0.0",
-  "description": "## Recomendações",
   "main": "index.js",
   "dependencies": {
     "@grpc/grpc-js": "^1.11.1",
@@ -30,17 +29,9 @@
     "milestone1": "ts-node app/src/milestone1.ts",
     "test": "jest"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ufabc-bcc/2024-q2-sistemas-distribuidos-projeto-01-gustavo-renan.git"
-  },
   "keywords": [
     "grpc"
   ],
-  "author": "Gustavo & Renan",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/ufabc-bcc/2024-q2-sistemas-distribuidos-projeto-01-gustavo-renan/issues"
-  },
-  "homepage": "https://github.com/ufabc-bcc/2024-q2-sistemas-distribuidos-projeto-01-gustavo-renan#readme"
+  "author": "Gustavo",
+  "license": "ISC"
 }
