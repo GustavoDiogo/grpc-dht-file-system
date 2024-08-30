@@ -67,6 +67,9 @@ async function simulateNodes() {
 
     const retrievedValue2 = await node4Client.retrieve('key2');
     console.log(`(SCRIPT) Valor recuperado em node4: ${Buffer.from(retrievedValue2.getValue_asU8())}`);
+
+    // Simula a mensagem NOT_FOUND
+    await node4Client.retrieve('key3');
   } catch (error) {
     console.error('(SCRIPT) Erro na simulação dos nós:', error);
   }

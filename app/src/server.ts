@@ -98,7 +98,7 @@ export const startServer = async (node: DHTNode) => {
   
     async newNode(call, callback) {
       const { ip, port } = call.request.toObject();
-      console.log('(API GRPC)', `NEW_NODE for ${ip}:${port}`);
+      console.log('(API GRPC)', `NEW_NODE - ${ip}:${port}`);
   
       node.predecessor = node.createNode(ip, port);
       node.predecessor.successor = node;
@@ -109,7 +109,7 @@ export const startServer = async (node: DHTNode) => {
     async leave(call, callback) {
       const { ip, port } = call.request.toObject();
   
-      console.log('(API GRPC)', `LEAVE from ${ip}:${port}`);
+      console.log('(API GRPC)', `LEAVE - ${ip}:${port}`);
   
       await node.leave();
       callback(null, new Empty());
@@ -118,18 +118,15 @@ export const startServer = async (node: DHTNode) => {
     async nodeGone(call, callback) {
       const { ip, port } = call.request.toObject();
   
-      console.log('(API GRPC)', `NODE_GONE from ${ip}:${port}`);
+      console.log('(API GRPC)', `NODE_GONE - ${ip}:${port}`);
   
       node.successor = node.createNode(ip, port);
       callback(null, new Empty());
     },
   
     async store(call, callback) {
-      const { key, value } = call.request.toObject();
+      const { key } = call.request.toObject();
       
-      const readableValue = atob(Buffer.from(value).toString('utf-8'));
-      console.log('(API GRPC)', 'Stored key:', key, 'with value:', readableValue, `in dht ${node.ip}:${node.port} with value length of ${value.length}`); 
- 
       await node.store(key, Buffer.from(call.request.getValue_asU8()));
       callback(null, new Empty());
     },
@@ -142,10 +139,14 @@ export const startServer = async (node: DHTNode) => {
         const okResponse = new RetrieveResponse();
         okResponse.setKey(key);
         okResponse.setValue(value);
+
+        console.log('(API GRPC)', `OK - Chave ${key} - valor ${value}`);
   
         callback(null, okResponse);
       } else {
         const notFoundResponse = new RetrieveResponse();
+
+        console.log('(API GRPC)', 'NOT_FOUND');
         callback(null, notFoundResponse);
       }
     },
@@ -153,7 +154,7 @@ export const startServer = async (node: DHTNode) => {
     transfer(call, callback) {
       const { pairsList } = call.request.toObject();
   
-      console.log('(API GRPC)', 'Recebendo dados de transferência');
+      console.log('(API GRPC)', 'TRANSFER');
   
       pairsList.forEach((pair) => {
         const { key, value } = pair;
