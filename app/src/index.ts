@@ -1,6 +1,7 @@
 import { DHTNode as Node } from './apis/dhtGRPC'; // Supondo que o código Node e gRPC Server estejam em node.ts
 import { startServer } from './server'; // Supondo que o código startServer esteja em server.ts
 import { DHTClient } from './client';
+import fs from 'fs';
 
 const nodes: Node[] = [];
 
@@ -34,32 +35,34 @@ async function simulateNodes() {
 
     // Teste de armazenamento e recuperação
     const node1Client = new DHTClient('127.0.0.1', 5001);
-    await node1Client.store('key1', Buffer.from('value1'));
-
+    const htmlFile = fs.readFileSync(__dirname + '/files/page.html');
+    await node1Client.store('key1', htmlFile);
+    
     await new Promise(resolve => setTimeout(resolve, 2000));
-
+    
     const node3Client = new DHTClient('127.0.0.1', 5003);
     const retrievedValue = await node3Client.retrieve('key1');
     console.log(`(SCRIPT) Valor recuperado em node3: ${Buffer.from(retrievedValue.getValue_asU8())}`);
-
+    
     await new Promise(resolve => setTimeout(resolve, 1000));
-
+    
     // Inicia o quarto nó e conecta ao terceiro nó
     const node4 = await createAndStartNode('127.0.0.1', 5004, [{ ip: '127.0.0.1', port: 5003 }]);
-
+    
     await new Promise(resolve => setTimeout(resolve, 1000));
-
+    
     // Simula a saída de um nó
     await node2.leave();
     console.log('(SCRIPT) Nó 2 deixou a rede.');
-
+    
     await new Promise(resolve => setTimeout(resolve, 2000));
-
+    
     // Armazena e recupera outro valor para garantir a consistência após a saída do nó
-    await node1Client.store('key2', Buffer.from('value2'));
-
+    const txtFile = fs.readFileSync(__dirname + '/files/text.txt');
+    await node1Client.store('key2', txtFile);
+    
     await new Promise(resolve => setTimeout(resolve, 2000));
-
+    
     const node4Client = new DHTClient('127.0.0.1', 5003);
 
     const retrievedValue2 = await node4Client.retrieve('key2');
