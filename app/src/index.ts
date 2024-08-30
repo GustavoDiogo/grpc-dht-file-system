@@ -42,21 +42,27 @@ async function simulateNodes() {
     const retrievedValue = await node3Client.retrieve('key1');
     console.log(`Valor recuperado em node3: ${Buffer.from(retrievedValue.getValue_asU8())}`);
 
-    // await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // // Inicia o quarto nó e conecta ao terceiro nó
-    // const node4 = await createAndStartNode('127.0.0.1', 5004, [{ ip: '127.0.0.1', port: 5003 }]);
+    // Inicia o quarto nó e conecta ao terceiro nó
+    const node4 = await createAndStartNode('127.0.0.1', 5004, [{ ip: '127.0.0.1', port: 5003 }]);
 
-    // await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // // Simula a saída de um nó
-    // await node2.leave();
-    // console.log('Nó 2 deixou a rede.');
+    // Simula a saída de um nó
+    await node2.leave();
+    console.log('Nó 2 deixou a rede.');
 
-    // // Armazena e recupera outro valor para garantir a consistência após a saída do nó
-    // await node1.store('key2', Buffer.from('value2'));
-    // const retrievedValue2 = await node4.retrieve('key2');
-    // console.log(`Valor recuperado em node4: ${retrievedValue2?.toString()}`);
+    // Armazena e recupera outro valor para garantir a consistência após a saída do nó
+    // await node1Client.store('key2', Buffer.from('value2'));
+
+    // await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // const node4Client = new DHTClient('127.0.0.1', 5003);
+
+    // const retrievedValue2 = await node4Client.retrieve('key2');
+    // console.log(`Valor recuperado em node4: ${Buffer.from(retrievedValue2.getValue_asU8())}`);
+
   } catch (error) {
     console.error('Erro na simulação dos nós:', error);
   }
