@@ -10,7 +10,7 @@ async function createAndStartNode(ip: string, port: number, knownHosts: { ip: st
   await startServer(node); // Inicia o servidor gRPC
   await node.join(knownHosts); // Conecta o nó à DHT usando knownHosts
   nodes.push(node);
-  console.log(`Nó iniciado em ${ip}:${port} com ID ${node.id}`);
+  console.log(`(SCRIPT) Nó iniciado em ${ip}:${port} com ID ${node.id}`);
   return node;
 }
 
@@ -40,7 +40,7 @@ async function simulateNodes() {
 
     const node3Client = new DHTClient('127.0.0.1', 5003);
     const retrievedValue = await node3Client.retrieve('key1');
-    console.log(`Valor recuperado em node3: ${Buffer.from(retrievedValue.getValue_asU8())}`);
+    console.log(`(SCRIPT) Valor recuperado em node3: ${Buffer.from(retrievedValue.getValue_asU8())}`);
 
     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -50,24 +50,25 @@ async function simulateNodes() {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Simula a saída de um nó
-    // await node2.leave();
-    // console.log('Nó 2 deixou a rede.');
+    await node2.leave();
+    console.log('(SCRIPT) Nó 2 deixou a rede.');
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Armazena e recupera outro valor para garantir a consistência após a saída do nó
-    // await node1Client.store('key2', Buffer.from('value2'));
+    await node1Client.store('key2', Buffer.from('value2'));
 
-    // await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // const node4Client = new DHTClient('127.0.0.1', 5003);
+    const node4Client = new DHTClient('127.0.0.1', 5003);
 
-    // const retrievedValue2 = await node4Client.retrieve('key2');
-    // console.log(`Valor recuperado em node4: ${Buffer.from(retrievedValue2.getValue_asU8())}`);
-
+    const retrievedValue2 = await node4Client.retrieve('key2');
+    console.log(`(SCRIPT) Valor recuperado em node4: ${Buffer.from(retrievedValue2.getValue_asU8())}`);
   } catch (error) {
-    console.error('Erro na simulação dos nós:', error);
+    console.error('(SCRIPT) Erro na simulação dos nós:', error);
   }
 }
 
 simulateNodes().catch(err => {
-  console.error('Erro na simulação dos nós:', err);
+  console.error('(SCRIPT) Erro na simulação dos nós:', err);
 });

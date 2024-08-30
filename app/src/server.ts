@@ -12,82 +12,93 @@ export const startServer = async (node: DHTNode) => {
       const incomingNodeId = request.getNodeid();
       const incomingNodeIp = request.getIp();
       const incomingNodePort = request.getPort();
-    
-      console.log(`Recebido JOIN de ${incomingNodeIp}:${incomingNodePort} com ID ${incomingNodeId}`);
-    
+  
+      console.log('(API GRPC)', `Recebido JOIN de ${incomingNodeIp}:${incomingNodePort} com ID ${incomingNodeId}`);
+  
       // Verifica se o nó que está tentando se conectar já é o sucessor ou predecessor
       if (node.id === incomingNodeId) {
-        console.warn('Loop detectado: O nó que está tentando se conectar já é o atual. Evitando loop.');
+        console.warn('(API GRPC)', 'Loop detectado: O nó que está tentando se conectar já é o atual. Evitando loop.');
         const response = new JoinResponse();
         response.setNodeid(node.id);
-        response.setSuccessorip(node.successor.ip);
-        response.setSuccessorport(node.successor.port);
+        if (node.successor) {
+          response.setSuccessorip(node.successor.ip);
+          response.setSuccessorport(node.successor.port);
+        }
         response.setPredecessorip(node.predecessor?.ip || '');
         response.setPredecessorport(node.predecessor?.port || 0);
         callback(null, response);
         return;
       }
-    
-      // Verifica se o nó que está se conectando deve ser inserido entre o nó atual e o sucessor
-      if (node.between(incomingNodeId, node.id, node.successor.id)) {
-        const newNode = node.createNode(incomingNodeIp, incomingNodePort, incomingNodeId);
-    
-        if (node.successor.id !== newNode.id) {
-          // Atualiza as referências de sucessor e predecessor
-          newNode.successor = node.successor;
-          newNode.predecessor = node;
-          node.successor.predecessor = newNode;
-          node.successor = newNode;
-    
-          console.log(`Novo nó ${incomingNodeIp}:${incomingNodePort} inserido na rede.`);
-    
-          // Responde com os dados do nó predecessor e sucessor
-          const response = new JoinResponse();
-          response.setNodeid(newNode.id);
-          response.setSuccessorip(newNode.successor.ip);
-          response.setSuccessorport(newNode.successor.port);
-          response.setPredecessorip(newNode.predecessor.ip);
-          response.setPredecessorport(newNode.predecessor.port);
-    
-          // Transfere os dados que agora são de responsabilidade do novo nó
-          await node.transferDataToNewNode();
-    
-          callback(null, response);
-        } else {
-          console.log(`O nó ${newNode.ip}:${newNode.port} já está inserido na rede. Evitando inserção duplicada.`);
-          const response = new JoinResponse();
-          response.setNodeid(node.id);
+  
+      // Verifica se o nó que está se conectando já é o sucessor ou predecessor para evitar reconfigurações desnecessárias
+      if (node.successor?.id === incomingNodeId || (node.predecessor && node.predecessor.id === incomingNodeId)) {
+        console.warn('(API GRPC)', `O nó ${incomingNodeIp}:${incomingNodePort} já é o sucessor ou predecessor. Evitando reconfiguração.`);
+        const response = new JoinResponse();
+        response.setNodeid(node.id);
+        if (node.successor) {
           response.setSuccessorip(node.successor.ip);
           response.setSuccessorport(node.successor.port);
-          response.setPredecessorip(node.predecessor?.ip || '');
-          response.setPredecessorport(node.predecessor?.port || 0);
-          callback(null, response);
+
         }
-      } else {
-        // Encaminha para o sucessor
+        response.setPredecessorip(node.predecessor?.ip || '');
+        response.setPredecessorport(node.predecessor?.port || 0);
+        callback(null, response);
+        return;
+      }
+  
+      // Verifica se o nó que está se conectando deve ser inserido entre o nó atual e o sucessor
+      if ( node.successor?.id && node.between(incomingNodeId, node.id, node.successor?.id)) {
+        const newNode = node.createNode(incomingNodeIp, incomingNodePort, incomingNodeId);
+  
+        // Atualiza as referências de sucessor e predecessor
+        newNode.successor = node.successor;
+        newNode.predecessor = node;
+        if (node.successor) {
+          node.successor.predecessor = newNode;
+
+        }
+        node.successor = newNode;
+  
+        console.log('(API GRPC)', `Novo nó ${incomingNodeIp}:${incomingNodePort} inserido na rede.`);
+  
+        const response = new JoinResponse();
+        response.setNodeid(newNode.id);
+        if (newNode.successor) {
+          response.setSuccessorip(newNode.successor.ip);
+
+          response.setSuccessorport(newNode.successor.port);
+        }
+        response.setPredecessorip(newNode.predecessor.ip);
+        response.setPredecessorport(newNode.predecessor.port);
+  
+        callback(null, response);
+      } else if (node.successor) {
+        // Encaminha a solicitação para o próximo nó
         const client = new DHTClient(node.successor.ip, node.successor.port);
         try {
           const joinResponse = await client.join(incomingNodeIp, incomingNodePort, incomingNodeId);
-    
-          // Responde com os dados recebidos do sucessor
+  
+          // Retorna o sucessor e predecessor apropriados
           const response = new JoinResponse();
           response.setNodeid(joinResponse.getNodeid());
           response.setSuccessorip(joinResponse.getSuccessorip());
           response.setSuccessorport(joinResponse.getSuccessorport());
           response.setPredecessorip(joinResponse.getPredecessorip());
           response.setPredecessorport(joinResponse.getPredecessorport());
-    
+  
           callback(null, response);
         } catch (error) {
-          console.error(`Erro ao encaminhar JOIN para ${node.successor.ip}:${node.successor.port}:`, error);
+          console.error('(API GRPC)', `Erro ao encaminhar JOIN para ${node.successor.ip}:${node.successor.port}:`, error);
           callback(null, null);
         }
+      } else {
+        callback(null, null);
       }
     },
   
     async newNode(call, callback) {
       const { ip, port } = call.request.toObject();
-      console.log('(API NODE)', `NEW_NODE for ${ip}:${port}`);
+      console.log('(API GRPC)', `NEW_NODE for ${ip}:${port}`);
   
       node.predecessor = node.createNode(ip, port);
       node.predecessor.successor = node;
@@ -98,7 +109,7 @@ export const startServer = async (node: DHTNode) => {
     async leave(call, callback) {
       const { ip, port } = call.request.toObject();
   
-      console.log('(API NODE)', `LEAVE from ${ip}:${port}`);
+      console.log('(API GRPC)', `LEAVE from ${ip}:${port}`);
   
       await node.leave();
       callback(null, new Empty());
@@ -107,7 +118,7 @@ export const startServer = async (node: DHTNode) => {
     async nodeGone(call, callback) {
       const { ip, port } = call.request.toObject();
   
-      console.log('(API NODE)', `NODE_GONE from ${ip}:${port}`);
+      console.log('(API GRPC)', `NODE_GONE from ${ip}:${port}`);
   
       node.successor = node.createNode(ip, port);
       callback(null, new Empty());
@@ -117,7 +128,7 @@ export const startServer = async (node: DHTNode) => {
       const { key, value } = call.request.toObject();
       
       const readableValue = atob(Buffer.from(value).toString('utf-8'));
-      console.log('(API NODE)', 'Stored key:', key, 'with value:', readableValue, `in dht ${node.ip}:${node.port} with value length of ${value.length}`); 
+      console.log('(API GRPC)', 'Stored key:', key, 'with value:', readableValue, `in dht ${node.ip}:${node.port} with value length of ${value.length}`); 
  
       await node.store(key, Buffer.from(call.request.getValue_asU8()));
       callback(null, new Empty());
@@ -142,7 +153,7 @@ export const startServer = async (node: DHTNode) => {
     transfer(call, callback) {
       const { pairsList } = call.request.toObject();
   
-      console.log('(API NODE)', 'Recebendo dados de transferência');
+      console.log('(API GRPC)', 'Recebendo dados de transferência');
   
       pairsList.forEach((pair) => {
         const { key, value } = pair;
@@ -163,7 +174,7 @@ export const startServer = async (node: DHTNode) => {
       console.error(err);
       return;
     }
-    console.log(`DHT Node running on ${address}`);
+    console.log('(API GRPC)', `Node running on ${address}`);
   });
 
 };

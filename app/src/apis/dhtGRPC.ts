@@ -1,6 +1,5 @@
 import * as crypto from 'crypto';
 import { DHTClient } from '../client';
-import { JoinRequest, KeyValue } from '../proto/dht_pb';
 
 type NodeId = string;
 type Key = string;
@@ -12,7 +11,7 @@ interface Node {
   ip: string;
   port: number;
   predecessor: Node | null;
-  successor: Node;
+  successor: Node | null;
   data: Map<Key, Buffer>;
 }
 
@@ -25,7 +24,7 @@ export class DHTNode implements Node {
 
   predecessor: Node | null = null;
 
-  successor: Node;
+  successor: Node | null;
 
   data: Map<Key, Buffer> = new Map();
 
@@ -57,7 +56,7 @@ export class DHTNode implements Node {
       // Se não houver hosts conhecidos, este nó é o primeiro na rede
       this.predecessor = null;
       this.successor = this;
-      console.log(`Nó inicializado como o primeiro na rede: ${this.ip}:${this.port}`);
+      console.log(`(API DHT) Nó inicializado como o primeiro na rede: ${this.ip}:${this.port}`);
     } else {
       let connected = false;
   
@@ -69,7 +68,7 @@ export class DHTNode implements Node {
           if (joinResponse.getNodeid() === this.id || 
               (joinResponse.getSuccessorip() === this.ip && joinResponse.getSuccessorport() === this.port) ||
               (joinResponse.getPredecessorip() === this.ip && joinResponse.getPredecessorport() === this.port)) {
-            console.warn(`Loop detectado: Recebido próprio ID ou conectado de volta a si mesmo (${this.ip}:${this.port}). Ignorando este nó para evitar loop.`);
+            console.warn(`(API DHT) Loop detectado: Recebido próprio ID ou conectado de volta a si mesmo (${this.ip}:${this.port}). Ignorando este nó para evitar loop.`);
             continue;
           }
   
@@ -84,15 +83,15 @@ export class DHTNode implements Node {
   
           await this.transferDataToNewNode();
           connected = true;
-          console.log(`Nó conectado com sucesso: ${this.ip}:${this.port}`);
+          console.log(`(API DHT) Nó conectado com sucesso: ${this.ip}:${this.port}`);
           break;
         } catch (error) {
-          console.error(`Erro ao tentar conectar ao nó ${host.ip}:${host.port}:`, error);
+          console.error(`(API DHT) Erro ao tentar conectar ao nó ${host.ip}:${host.port}:`, error);
         }
       }
   
       if (!connected) {
-        console.warn('Falha ao conectar a nós conhecidos. Este nó será o primeiro na rede.');
+        console.warn('(API DHT) Falha ao conectar a nós conhecidos. Este nó será o primeiro na rede.');
         this.predecessor = null;
         this.successor = this;
       }
@@ -101,41 +100,49 @@ export class DHTNode implements Node {
   
     
   async leave(): Promise<void> {
-    console.log('(API DHT)', `Node ${this.ip}:${this.port} leaving the DHT`);
+    if (this.predecessor && this.successor) {
+      // Notifica o sucessor para atualizar seu predecessor
+      const client = new DHTClient(this.successor.ip, this.successor.port);
+      await client.nodeGone(this.id, this.predecessor.ip, this.predecessor.port);
 
-    if (this.predecessor) {
-      const predecessorClient = new DHTClient(this.predecessor.ip, this.predecessor.port);
-      await predecessorClient.nodeGone(this.successor.id, this.successor.ip, this.successor.port);
-    }
-    if (this.successor) {
+      // Transfere os dados para o sucessor
       await this.transferDataToSuccessor();
-      this.successor.predecessor = this.predecessor;
     }
+
+    console.log(`(API DHT) Node ${this.ip}:${this.port} leaving the DHT`);
+    this.predecessor = null;
+    this.successor = null;
   }
 
   async store(key: Key, value: Buffer): Promise<void> {
     const hashedKey = this.hashKey(key);
     const responsibleNode = await this.findSuccessor(hashedKey);
-  
+
+    if (!responsibleNode) {
+      console.log(`(API DHT) Falha ao encontrar sucessor para a chave: ${key}. Abandonando operação.`);
+      return;
+    }
+
     if (responsibleNode.id === this.id) {
-      // Armazena localmente se este nó é o responsável pela chave
       this.data.set(key, value);
-      console.log(`Chave ${key} armazenada no nó ${this.id} (${this.ip}:${this.port})`);
+      console.log(`(API DHT) Stored key: ${key} with value: ${value.toString()} in dht ${this.ip}:${this.port} with value length of ${value.length}`);
     } else {
-      // Caso contrário, encaminha para o nó responsável sem alterar a estrutura da DHT
       const client = new DHTClient(responsibleNode.ip, responsibleNode.port);
       await client.store(key, value);
     }
   }
+
+
   
   async retrieve(key: Key) {
     const hashedKey = this.hashKey(key);
     const responsibleNode = await this.findSuccessor(hashedKey);
   
+    if (!responsibleNode) return;
     if (responsibleNode.id === this.id) {
       // Recupera localmente se este nó é o responsável pela chave
       const value = this.data.get(key) || null;
-      console.log(`Chave ${key} recuperada no nó ${this.id} (${this.ip}:${this.port})`);
+      console.log(`(API DHT) Chave ${key} recuperada no nó ${this.id} (${this.ip}:${this.port})`);
       return value;
     } else {
       // Encaminha para o nó responsável sem alterar a estrutura da DHT
@@ -147,7 +154,8 @@ export class DHTNode implements Node {
   }
   
 
-  private async findSuccessor(id: NodeId): Promise<Node> {
+  private async findSuccessor(id: NodeId): Promise<Node | void> {
+    if (!this.successor) return;
     if (this.between(id, this.id, this.successor.id) || this.id === this.successor.id) {
       return this.successor;
     } else if (this.successor.id === this.id) {
@@ -166,6 +174,7 @@ export class DHTNode implements Node {
   
 
   async transferDataToNewNode(): Promise<void> {
+    if (!this.successor) return;
     const keysToTransfer: Key[] = [];
     for (const [key, value] of this.successor.data.entries()) {
       if (this.between(this.hashKey(key), this.predecessor!.id, this.id)) {
@@ -179,14 +188,20 @@ export class DHTNode implements Node {
   }
 
   private async transferDataToSuccessor(): Promise<void> {
-    const dataToTransfer: KeyValue[] = [];
-    for (const [key, value] of this.data.entries()) {
-      dataToTransfer.push(new KeyValue().setKey(key).setValue(value));
-    }
-    this.data.clear();
+    if (!this.successor) return;
 
-    const client = new DHTClient(this.successor.ip, this.successor.port);
-    await client.transfer(dataToTransfer);
+    for (const [key, value] of this.data.entries()) {
+      const client = new DHTClient(this.successor.ip, this.successor.port);
+      await client.store(key, value);
+      console.log(`(API DHT) Dados transferidos: ${key} -> ${value.toString()} para ${this.successor.ip}:${this.successor.port}`);
+    }
+  }
+
+  async nodeGone(nodeId: string, newSuccessorIp: string, newSuccessorPort: number): Promise<void> {
+    if (this.successor && this.successor.id === nodeId) {
+      this.successor = this.createNode(newSuccessorIp, newSuccessorPort);
+      console.log(`(API DHT) Sucessor atualizado: ${this.successor.ip}:${this.successor.port}`);
+    }
   }
 
   createNode(ip: string, port: number, id?: NodeId): Node {
