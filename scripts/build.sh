@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PROTO_DIR=./server/src/proto
+PROTO_DIR=./app/src/proto
 
 if [ ! -d "$PROTO_DIR" ]; then
   mkdir "$PROTO_DIR"

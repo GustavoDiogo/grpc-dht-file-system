@@ -1,9 +1,9 @@
-import crypto from 'crypto';
-
-const M_BITS = 160; // Definindo o tamanho dos identificadores e chaves (por exemplo, 160 bits)
+import * as crypto from 'crypto';
 
 type NodeId = string;
 type Key = string;
+
+const M_BITS = 160; // Tamanho dos identificadores e chaves em bits
 
 interface Node {
   id: NodeId;
@@ -34,7 +34,7 @@ export class DHTNode implements Node {
     this.successor = this; // Inicialmente, o nó aponta para si mesmo
   }
 
-  private generateRandomId(): NodeId {
+  generateRandomId(): NodeId {
     return crypto.randomBytes(M_BITS / 8).toString('hex');
   }
 
@@ -50,29 +50,30 @@ export class DHTNode implements Node {
     }
   }
 
-  join(knownHosts: { id: NodeId; ip: string; port: number }[]): void {
+  join(knownHosts: { ip: string; port: number }[]): void {
     if (knownHosts.length === 0) {
       this.predecessor = null;
       this.successor = this;
     } else {
       for (const host of knownHosts) {
-        if (this.ping(host)) {
-          const hostNode = this.createNode(host.id, host.ip, host.port);
-          const successor = this.findSuccessor(this.id, hostNode);
-          this.successor = successor;
-          this.predecessor = this.successor.predecessor;
-          this.successor.predecessor = this;
-          if (this.predecessor) {
-            this.predecessor.successor = this;
-          }
-          this.transferData();
-          break;
+        const hostNode = this.createNode(host.ip, host.port);
+        const successor = this.findSuccessor(this.id, hostNode);
+        this.successor = successor;
+        this.predecessor = this.successor.predecessor;
+        this.successor.predecessor = this;
+        if (this.predecessor) {
+          this.predecessor.successor = this;
         }
+        this.transferData();
+        break;
       }
     }
+    console.log('(API DHT)', `Node ${this.ip}:${this.port} joined the DHT with ID ${this.id}`);
   }
 
   leave(): void {
+    console.log('(API DHT)', `Node ${this.ip}:${this.port} leaving the DHT`);
+
     if (this.predecessor) {
       this.predecessor.successor = this.successor;
     }
@@ -83,17 +84,22 @@ export class DHTNode implements Node {
   }
 
   store(key: Key, value: Buffer): void {
+    console.log('(API DHT)', `Node ${this.ip}:${this.port} storing value ${value} for key ${key}`);
+
     const node = this.findSuccessor(this.hashKey(key));
     node.data.set(key, value);
   }
 
   retrieve(key: Key): Buffer | null {
     const node = this.findSuccessor(this.hashKey(key));
-    return node.data.get(key) || null;
+
+    const message = node.data.get(key) || null;
+    console.log('(API DHT)', `Node ${this.ip}:${this.port} retrieved value for key ${key}: ${message?.toString()}`);
+
+    return message;
   }
 
   private findSuccessor(id: NodeId, currentNode: Node = this): Node {
-    // Simulação de lógica para encontrar o sucessor
     if (this.between(id, currentNode.id, currentNode.successor.id)) {
       return currentNode.successor;
     } else {
@@ -115,41 +121,14 @@ export class DHTNode implements Node {
     }
   }
 
-  private ping(node: { id: NodeId; ip: string; port: number }): boolean {
-    // Simulação de um ping, deve ser substituído por uma real verificação de conectividade
-    console.log(`Pinging ${node.ip}:${node.port}`);
-    return true;
-  }
-
-  private createNode(id: NodeId, ip: string, port: number): Node {
+  createNode(ip: string, port: number): Node {
     return {
-      id,
+      id: this.generateRandomId(),
       ip,
       port,
       predecessor: null,
       successor: this, // Referência a este nó como sucessor para simplificação
       data: new Map(),
     };
-  }
-
-  // Funções adicionais
-
-  storeNode(nodeId: NodeId, ip: string, port: number): void {
-    const newNode = this.createNode(nodeId, ip, port);
-    // Atualizar o sucessor para o novo nó
-    this.successor = newNode;
-    newNode.predecessor = this;
-  }
-
-  receiveLeaveRequest(leaveRequest: { predecessorip: string, predecessorport: number }): void {
-    // Atualizar o sucessor para o nó que está saindo
-    const leavePredecessor = this.createNode('', leaveRequest.predecessorip, leaveRequest.predecessorport);
-    this.successor.predecessor = leavePredecessor;
-  }
-
-  receiveNodeGoneRequest(nodeGoneRequest: { nodeid: NodeId, ip: string, port: number }): void {
-    // Atualizar o predecessor para o novo sucessor do nó que está saindo
-    const newSuccessor = this.createNode(nodeGoneRequest.nodeid, nodeGoneRequest.ip, nodeGoneRequest.port);
-    this.predecessor!.successor = newSuccessor;
   }
 }

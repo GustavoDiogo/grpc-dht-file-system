@@ -25,12 +25,9 @@
     "ts-protoc-gen": "^0.15.0"
   },
   "scripts": {
-    "build:server": "sh scripts/buildServer.sh",
-    "build:clients": "sh scripts/buildClients.sh",
-    "build": "npm run build:server && npm run build:clients",
-    "start:server": "nodemon --watch 'server/src/' --exec 'ts-node server/src/index.ts' -e ts,js",
-    "start:client:node": "nodemon --watch 'client-node/src/' --exec 'ts-node client-node/src/index.ts' -e ts,js",
-    "start:client:python": "python3 client-python/src/client.py",
+    "build": "sh scripts/build.sh",
+    "start": "nodemon --watch 'app/src/' --exec 'ts-node app/src/index.ts' -e ts,js",
+    "milestone1": "ts-node app/src/milestone1.ts",
     "test": "jest"
   },
   "repository": {

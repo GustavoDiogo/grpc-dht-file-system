@@ -1,58 +1,69 @@
 syntax = "proto3";
 
-import "google/protobuf/empty.proto";
+package dht;
 
-package dhtchat;
+service DHTService {
+  rpc Join(JoinRequest) returns (JoinResponse);
+  rpc NewNode(NewNodeRequest) returns (Empty);
+  rpc Leave(LeaveRequest) returns (Empty);
+  rpc NodeGone(NodeGoneRequest) returns (Empty);
+  rpc Store(StoreRequest) returns (Empty);
+  rpc Retrieve(RetrieveRequest) returns (RetrieveResponse);
+  rpc Transfer(TransferRequest) returns (Empty);
+}
 
 message JoinRequest {
-    string nodeId = 1;
-    string ip = 2;
-    int32 port = 3;
+  string nodeId = 1;
+  string ip = 2;
+  int32 port = 3;
 }
 
 message JoinResponse {
-    string nodeId = 1;
-    string successorIp = 2;
-    int32 successorPort = 3;
-    string predecessorIp = 4;
-    int32 predecessorPort = 5;
+  string nodeId = 1;
+  string successorIp = 2;
+  int32 successorPort = 3;
+  string predecessorIp = 4;
+  int32 predecessorPort = 5;
 }
 
-message NodeInfo {
-    string nodeId = 1;
-    string ip = 2;
-    int32 port = 3;
+message NewNodeRequest {
+  string ip = 1;
+  int32 port = 2;
+}
+
+message LeaveRequest {
+  string nodeId = 1;
+  string ip = 2;
+  int32 port = 3;
+}
+
+message NodeGoneRequest {
+  string nodeId = 1;
+  string ip = 2;
+  int32 port = 3;
 }
 
 message StoreRequest {
-    string key = 1;
-    bytes value = 2;
+  string key = 1;
+  bytes value = 2;
 }
 
 message RetrieveRequest {
-    string key = 1;
+  string key = 1;
 }
 
 message RetrieveResponse {
-    string key = 1;
-    bytes value = 2;
+  string key = 1;
+  bytes value = 2;
 }
 
-message NotFoundResponse {}
-
-message TransferData {
-    string key = 1;
-    bytes value = 2;
+message TransferRequest {
+  repeated KeyValue pairs = 1;
 }
 
-service DHTChat {
-    rpc Join(JoinRequest) returns (JoinResponse);
-    rpc NewNode(NodeInfo) returns (google.protobuf.Empty);
-    rpc Leave(NodeInfo) returns (google.protobuf.Empty);
-    rpc NodeGone(NodeInfo) returns (google.protobuf.Empty);
-    rpc Store(StoreRequest) returns (google.protobuf.Empty);
-    rpc Retrieve(RetrieveRequest) returns (RetrieveResponse);
-    rpc Ok(RetrieveResponse) returns (google.protobuf.Empty);
-    rpc NotFound(RetrieveRequest) returns (google.protobuf.Empty);
-    rpc Transfer(TransferData) returns (google.protobuf.Empty);
+message KeyValue {
+  string key = 1;
+  bytes value = 2;
 }
+
+message Empty {}
