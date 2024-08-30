@@ -50,8 +50,8 @@ async function simulateNodes() {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Simula a saída de um nó
-    await node2.leave();
-    console.log('Nó 2 deixou a rede.');
+    // await node2.leave();
+    // console.log('Nó 2 deixou a rede.');
 
     // Armazena e recupera outro valor para garantir a consistência após a saída do nó
     // await node1Client.store('key2', Buffer.from('value2'));
