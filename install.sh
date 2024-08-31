@@ -35,10 +35,7 @@ fi
 
 echo -e "${YELLOW}Installing Node.js dependencies...${RESET}"
 npm i
-cd server
+cd app 
 npm i
 cd ..
-cd client-node
-cd ..
-npm i
 echo -e "${OK_EMOJI_TEXT}"
