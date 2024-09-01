@@ -1,5 +1,5 @@
 {
-  "name": "grpc-dht-app",
+  "name": "grpc-dht-distributed-file-system",
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
@@ -24,9 +24,8 @@
     "ts-protoc-gen": "^0.15.0"
   },
   "scripts": {
-    "build": "sh scripts/build.sh",
-    "start": "nodemon --watch 'app/src/' --exec 'ts-node app/src/simulate.ts' -e ts,js",
-    "milestone1": "ts-node app/src/milestone1.ts",
+    "generate": "sh scripts/generateProto.sh",
+    "simulate": "nodemon --watch 'app/src/' --exec 'ts-node app/src/simulate.ts' -e ts,js",
     "test": "jest"
   },
   "keywords": [
