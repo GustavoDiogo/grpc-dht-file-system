@@ -54,8 +54,8 @@ async function simulateNodes() {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Simula a saída de um nó
-    const node1Client = new DHTClient('127.0.0.1', 5002);
-    await node1Client.leave('127.0.0.1', 5002); 
+    const node2Client = new DHTClient('127.0.0.1', 5002);
+    await node2Client.leave('127.0.0.1', 5002); 
     console.log('(SCRIPT) Nó 2 deixou a rede.');
     
     await new Promise(resolve => setTimeout(resolve, 2000));
