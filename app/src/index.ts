@@ -56,6 +56,22 @@ export class DHTClient {
     });
   }
 
+  leave(ip: string, port: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = new LeaveRequest();
+      request.setIp(ip);
+      request.setPort(port);
+
+      this.client.leave(request, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
   nodeGone(nodeId: string, ip: string, port: number): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = new NodeGoneRequest();
@@ -188,9 +204,11 @@ export class Node {
 
   async join(knownHosts: { ip: string; port: number }[]): Promise<void> {
     if (knownHosts.length === 0) {
+      console.log('(API DHT)', `JOIN - Nenhum nó conhecido. Inicializando a rede para ${this.ip}:${this.port}.`);
       this.predecessor = null;
       this.successor = this;
     } else {
+      console.log('(API DHT)', `JOIN - Recebido pedido de JOIN para ${this.ip}:${this.port} de ${knownHosts.map(host => `${host.ip}:${host.port}`).join(', ')}`);
       for (const host of knownHosts) {
         const client = new DHTClient(host.ip, host.port);
         const joinResponse = await client.findSuccessor(this.ip, this.port, this.id); // Novo método findSuccessor
@@ -199,6 +217,7 @@ export class Node {
         this.successor.predecessor = this;
 
         if (this.predecessor) {
+          console.log('(API DHT)', `NEW_NODE - Enviado pedido para adicionar ${this.ip}:${this.port} como novo nó para ${this.predecessor.ip}:${this.predecessor.port}`);
           const predecessorClient = new DHTClient(this.predecessor.ip, this.predecessor.port);
           await predecessorClient.newNode(this.ip, this.port);
         }
@@ -229,10 +248,11 @@ export class Node {
     if (node.id !== this.id) {
       const client = new DHTClient(node.ip, node.port);
       await client.store(key, Buffer.from(value));
+      console.log('(API DHT)', `STORE - Chave ${key} armazenada exteriormente no nó ${node.ip}:${node.port}`);
     } else {
       // Se o nó atual for o responsável, armazene a chave localmente
       this.data.set(key, Buffer.from(value));
-      console.log(`(LOCAL) Chave ${key} armazenada no nó ${this.id}`);
+      console.log('(API DHT)', `STORE - Chave ${key} armazenada localmente no nó ${this.ip}:${this.port}`);
     }
   }
 
@@ -240,14 +260,17 @@ export class Node {
   async retrieve(key: Key): Promise<Uint8Array | null> {
     // Verifica se a chave está armazenada localmente
     if (this.data.has(key)) {
+      console.log('(API DHT)', `RETRIEVE - Chave ${key} encontrada localmente.`);
       return this.data.get(key) || null;
     } else {
       // Se não encontrado, verificar se o nó atual é responsável por essa chave
       const successor = await this.findSuccessor(this.hashKey(key));
       if (successor.id !== this.id) {
+        console.log('(API DHT)', `RETRIEVE - Chave ${key} encontrada exteriormente no nó ${successor.ip}:${successor.port}`);
         const client = new DHTClient(successor.ip, successor.port);
         return client.retrieve(key).then(response => response.getValue_asU8()).catch(() => null);
       } else {
+        console.log('(API DHT)', `RETRIEVE - Chave ${key} não encontrada em nenhum nó.`);
         return null; // Retorna null se o valor não foi encontrado
       }
     }
@@ -314,7 +337,7 @@ class DHTServiceImpl implements IDHTServiceServer {
   async join(call: grpc.ServerUnaryCall<JoinRequest, JoinResponse>, callback: grpc.sendUnaryData<JoinResponse>): Promise<void> {
     const request = call.request;
 
-    console.log(`Recebido JOIN de ${request.getIp()}:${request.getPort()}`);
+    console.log('(API GRPC)', `JOIN_OK - Recebido JOIN de ${request.getIp()}:${request.getPort()}`);
 
     await this.node.join([{ ip: request.getIp(), port: request.getPort() }]);
 
@@ -333,7 +356,7 @@ class DHTServiceImpl implements IDHTServiceServer {
   async newNode(call: grpc.ServerUnaryCall<NewNodeRequest, Empty>, callback: grpc.sendUnaryData<Empty>): Promise<void> {
     const request = call.request;
 
-    console.log(`Recebido NEW_NODE para ${request.getIp()}:${request.getPort()}`);
+    console.log('(API GRPC)', `NEW_NODE - Recebido NEW_NODE para ${request.getIp()}:${request.getPort()}`);
 
     this.node.predecessor = this.node.createNode(request.getIp(), request.getPort());
     this.node.predecessor.successor = this.node;
@@ -344,7 +367,7 @@ class DHTServiceImpl implements IDHTServiceServer {
   async leave(call: grpc.ServerUnaryCall<LeaveRequest, Empty>, callback: grpc.sendUnaryData<Empty>): Promise<void> {
     const request = call.request;
 
-    console.log(`Recebido LEAVE de ${request.getIp()}:${request.getPort()}`);
+    console.log('(API GRPC)', `LEAVE - Recebido LEAVE de ${request.getIp()}:${request.getPort()}`);
 
     await this.node.leave();
     callback(null, new Empty());
@@ -353,7 +376,7 @@ class DHTServiceImpl implements IDHTServiceServer {
   async nodeGone(call: grpc.ServerUnaryCall<NodeGoneRequest, Empty>, callback: grpc.sendUnaryData<Empty>): Promise<void> {
     const request = call.request;
 
-    console.log(`Recebido NODE_GONE de ${request.getIp()}:${request.getPort()}`);
+    console.log('(API GRPC)', `NODE_GONE - Recebido NODE_GONE de ${request.getIp()}:${request.getPort()}`);
 
     this.node.successor = this.node.createNode(request.getIp(), request.getPort());
     callback(null, new Empty());
@@ -366,12 +389,12 @@ class DHTServiceImpl implements IDHTServiceServer {
 
     // Verifica se a chave já está armazenada neste nó
     if (this.node.data.has(key)) {
-      console.log(`Chave ${key} já está armazenada. Ignorando a operação.`);
+      console.log('(API GRPC)', `STORE - Chave ${key} já está armazenada. Ignorando a operação.`);
       callback(null, new Empty());
       return;
     }
 
-    console.log(`Armazenando chave ${key} com valor de tamanho ${value.length}`);
+    console.log('(API GRPC)', `STORE - Armazenando chave ${key} com valor de tamanho ${value.length}`);
 
     await this.node.store(key, value);
     callback(null, new Empty());
@@ -382,16 +405,18 @@ class DHTServiceImpl implements IDHTServiceServer {
     const request = call.request;
     const key = request.getKey();
 
-    console.log(`Recebendo pedido para recuperar a chave ${key}`);
+    console.log('(API GRPC)', `RETRIEVE - Recebendo pedido para recuperar a chave ${key}`);
 
     const value = await this.node.retrieve(key);
     const response = new RetrieveResponse();
 
     if (value) {
+      console.log('(API GRPC)', `OK - Chave ${key} encontrada.`);
+
       response.setKey(key);
       response.setValue(value);
     } else {
-      console.log(`Chave ${key} não encontrada.`);
+      console.log('(API GRPC)', `NOT_FOUND - Chave ${key} não encontrada.`);
       // Retorna uma resposta vazia indicando que a chave não foi encontrada
       response.setValue(new Uint8Array()); // Define como um array vazio para indicar chave não encontrada
     }
@@ -403,7 +428,7 @@ class DHTServiceImpl implements IDHTServiceServer {
   async transfer(call: grpc.ServerUnaryCall<TransferRequest, Empty>, callback: grpc.sendUnaryData<Empty>): Promise<void> {
     const request = call.request;
 
-    console.log('Recebendo dados de transferência');
+    console.log('(API GRPC)', 'TRANSFER - Recebendo dados de transferência');
 
     request.getPairsList().forEach((pair) => {
       this.node.data.set(pair.getKey(), pair.getValue_asU8());
@@ -415,7 +440,8 @@ class DHTServiceImpl implements IDHTServiceServer {
   async findSuccessor(call: grpc.ServerUnaryCall<JoinRequest, JoinResponse>, callback: grpc.sendUnaryData<JoinResponse>): Promise<void> {
     const request = call.request;
 
-    console.log(`Recebido findSuccessor para ${request.getNodeid()} de ${request.getIp()}:${request.getPort()}`);
+    // Para fins de debug
+    // console.log(`Recebido findSuccessor para ${request.getNodeid()} de ${request.getIp()}:${request.getPort()}`);
 
     // Identifica o sucessor correto para a requisição recebida
     let successorNode: Node = this.node.successor;
@@ -433,9 +459,6 @@ class DHTServiceImpl implements IDHTServiceServer {
 
 }
 
-// Implementação do cliente gRPC
-
-
 // Função principal para iniciar o servidor gRPC
 
 export function startServer(node: Node) {
@@ -448,6 +471,6 @@ export function startServer(node: Node) {
       console.error(err);
       return;
     }
-    console.log(`Servidor DHT rodando em ${address}`);
+    console.log('(API GRPC)', `Servidor DHT rodando em ${address}`);
   });
 }
