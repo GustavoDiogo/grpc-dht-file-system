@@ -193,6 +193,17 @@ var DHTServiceService = exports.DHTServiceService = {
     responseSerialize: serialize_dht_Empty,
     responseDeserialize: deserialize_dht_Empty,
   },
+  findSuccessor: {
+    path: '/dht.DHTService/FindSuccessor',
+    requestStream: false,
+    responseStream: false,
+    requestType: dht_pb.JoinRequest,
+    responseType: dht_pb.JoinResponse,
+    requestSerialize: serialize_dht_JoinRequest,
+    requestDeserialize: deserialize_dht_JoinRequest,
+    responseSerialize: serialize_dht_JoinResponse,
+    responseDeserialize: deserialize_dht_JoinResponse,
+  },
 };
 
 exports.DHTServiceClient = grpc.makeGenericClientConstructor(DHTServiceService);

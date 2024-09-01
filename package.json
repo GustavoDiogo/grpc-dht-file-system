@@ -25,7 +25,7 @@
   },
   "scripts": {
     "build": "sh scripts/build.sh",
-    "start": "nodemon --watch 'app/src/' --exec 'ts-node app/src/index.ts' -e ts,js",
+    "start": "nodemon --watch 'app/src/' --exec 'ts-node app/src/simulate.ts' -e ts,js",
     "milestone1": "ts-node app/src/milestone1.ts",
     "test": "jest"
   },

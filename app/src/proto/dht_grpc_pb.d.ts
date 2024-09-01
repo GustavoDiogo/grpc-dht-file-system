@@ -15,6 +15,7 @@ interface IDHTServiceService extends grpc.ServiceDefinition<grpc.UntypedServiceI
     store: IDHTServiceService_IStore;
     retrieve: IDHTServiceService_IRetrieve;
     transfer: IDHTServiceService_ITransfer;
+    findSuccessor: IDHTServiceService_IFindSuccessor;
 }
 
 interface IDHTServiceService_IJoin extends grpc.MethodDefinition<dht_pb.JoinRequest, dht_pb.JoinResponse> {
@@ -80,6 +81,15 @@ interface IDHTServiceService_ITransfer extends grpc.MethodDefinition<dht_pb.Tran
     responseSerialize: grpc.serialize<dht_pb.Empty>;
     responseDeserialize: grpc.deserialize<dht_pb.Empty>;
 }
+interface IDHTServiceService_IFindSuccessor extends grpc.MethodDefinition<dht_pb.JoinRequest, dht_pb.JoinResponse> {
+    path: "/dht.DHTService/FindSuccessor";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<dht_pb.JoinRequest>;
+    requestDeserialize: grpc.deserialize<dht_pb.JoinRequest>;
+    responseSerialize: grpc.serialize<dht_pb.JoinResponse>;
+    responseDeserialize: grpc.deserialize<dht_pb.JoinResponse>;
+}
 
 export const DHTServiceService: IDHTServiceService;
 
@@ -91,6 +101,7 @@ export interface IDHTServiceServer extends grpc.UntypedServiceImplementation {
     store: grpc.handleUnaryCall<dht_pb.StoreRequest, dht_pb.Empty>;
     retrieve: grpc.handleUnaryCall<dht_pb.RetrieveRequest, dht_pb.RetrieveResponse>;
     transfer: grpc.handleUnaryCall<dht_pb.TransferRequest, dht_pb.Empty>;
+    findSuccessor: grpc.handleUnaryCall<dht_pb.JoinRequest, dht_pb.JoinResponse>;
 }
 
 export interface IDHTServiceClient {
@@ -115,6 +126,9 @@ export interface IDHTServiceClient {
     transfer(request: dht_pb.TransferRequest, callback: (error: grpc.ServiceError | null, response: dht_pb.Empty) => void): grpc.ClientUnaryCall;
     transfer(request: dht_pb.TransferRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: dht_pb.Empty) => void): grpc.ClientUnaryCall;
     transfer(request: dht_pb.TransferRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: dht_pb.Empty) => void): grpc.ClientUnaryCall;
+    findSuccessor(request: dht_pb.JoinRequest, callback: (error: grpc.ServiceError | null, response: dht_pb.JoinResponse) => void): grpc.ClientUnaryCall;
+    findSuccessor(request: dht_pb.JoinRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: dht_pb.JoinResponse) => void): grpc.ClientUnaryCall;
+    findSuccessor(request: dht_pb.JoinRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: dht_pb.JoinResponse) => void): grpc.ClientUnaryCall;
 }
 
 export class DHTServiceClient extends grpc.Client implements IDHTServiceClient {
@@ -140,4 +154,7 @@ export class DHTServiceClient extends grpc.Client implements IDHTServiceClient {
     public transfer(request: dht_pb.TransferRequest, callback: (error: grpc.ServiceError | null, response: dht_pb.Empty) => void): grpc.ClientUnaryCall;
     public transfer(request: dht_pb.TransferRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: dht_pb.Empty) => void): grpc.ClientUnaryCall;
     public transfer(request: dht_pb.TransferRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: dht_pb.Empty) => void): grpc.ClientUnaryCall;
+    public findSuccessor(request: dht_pb.JoinRequest, callback: (error: grpc.ServiceError | null, response: dht_pb.JoinResponse) => void): grpc.ClientUnaryCall;
+    public findSuccessor(request: dht_pb.JoinRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: dht_pb.JoinResponse) => void): grpc.ClientUnaryCall;
+    public findSuccessor(request: dht_pb.JoinRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: dht_pb.JoinResponse) => void): grpc.ClientUnaryCall;
 }
