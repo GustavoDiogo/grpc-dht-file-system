@@ -34,7 +34,7 @@ async function simulateNodes() {
 
     const htmlFile = fs.readFileSync(__dirname + '/files/page.html');
     console.log('(SCRIPT) Armazenando key1');
-    node1.store('key1', htmlFile);
+    await node1.store('key1', htmlFile);
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     console.log('(SCRIPT) Tentando recuperar key1 no node3');
@@ -47,27 +47,24 @@ async function simulateNodes() {
     }
 
     await new Promise(resolve => setTimeout(resolve, 1000));
-        
+      
     // Inicia o quarto nó e conecta ao terceiro nó
     const node4 = await createAndStartNode('127.0.0.1', 5004, [{ ip: '127.0.0.1', port: 5003 }]);
-    
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+      
     // Simula a saída de um nó
     const node2Client = new DHTClient('127.0.0.1', 5002);
-    await node2Client.leave('127.0.0.1', 5002); 
+    await node2Client.leave('127.0.0.1', 5002);
     console.log('(SCRIPT) Nó 2 deixou a rede.');
-    
+      
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+      
     // Armazena e recupera outro valor para garantir a consistência após a saída do nó
     const txtFile = fs.readFileSync(__dirname + '/files/text.txt');
     await node1.store('key2', txtFile);
-    
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+      
     const retrievedValue2 = await node4.retrieve('key2');
-
     if (retrievedValue2) {
       console.log(`(SCRIPT) Valor recuperado em node4: ${new TextDecoder().decode(retrievedValue2)}`);
     } else {
@@ -87,3 +84,4 @@ async function simulateNodes() {
 simulateNodes().catch(err => {
   console.error('(SCRIPT) Erro na simulação dos nós:', err);
 });
+
