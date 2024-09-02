@@ -1,5 +1,5 @@
 {
-  "name": "grpc-dht-distributed-file-system-app",
+  "name": "grpc-dht-file-system-app",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
