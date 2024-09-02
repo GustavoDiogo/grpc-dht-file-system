@@ -458,7 +458,7 @@ class DHTServiceImpl implements IDHTServiceServer {
   async findSuccessor(call: grpc.ServerUnaryCall<JoinRequest, JoinResponse>, callback: grpc.sendUnaryData<JoinResponse>): Promise<void> {
     const request = call.request;
 
-    console.log(`Recebido findSuccessor para ${request.getNodeid()} de ${request.getIp()}:${request.getPort()}`);
+    // console.log(`Recebido findSuccessor para ${request.getNodeid()} de ${request.getIp()}:${request.getPort()}`);
 
     let successorNode: Node = this.node.successor;
     if (this.node.between(request.getNodeid(), this.node.id, this.node.successor.id)) {
@@ -469,6 +469,8 @@ class DHTServiceImpl implements IDHTServiceServer {
     response.setNodeid(successorNode.id);
     response.setSuccessorip(successorNode.ip);
     response.setSuccessorport(successorNode.port);
+
+    console.log('(API GRPC)', `JOIN_OK - Para o nó ingressante ${request.getIp()}:${request.getPort()} com o sucessor ${successorNode.ip}:${successorNode.port} ${this.node.predecessor ? 'e predecessor' + `${this.node.predecessor?.ip}:${this.node.predecessor?.port}` : ''}`);
     
     callback(null, response);
   }
