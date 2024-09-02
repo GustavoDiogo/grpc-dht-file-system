@@ -232,14 +232,28 @@ export class Node {
   }
 
   async leave(): Promise<void> {
-    if (this.predecessor) {
-      const predecessorClient = new DHTClient(this.predecessor.ip, this.predecessor.port);
-      await predecessorClient.nodeGone(this.id, this.successor.ip, this.successor.port);
-    }
-    if (this.successor) {
+    if (this.successor && this.successor.id !== this.id) {
+      // Verifica se o predecessor não é nulo antes de enviar a mensagem NODE_GONE
+      if (this.predecessor) {
+        // Notifica o sucessor que este nó está saindo e informa quem será o novo predecessor
+        const successorClient = new DHTClient(this.successor.ip, this.successor.port);
+        await successorClient.nodeGone(this.id, this.predecessor.ip, this.predecessor.port);
+      } else {
+        // Se o predecessor é nulo, o sucessor deve ser o único nó na rede após a saída
+        console.log(`(API DHT) LEAVE - Nó ${this.id} está saindo e não tem predecessor, atualizando sucessor para si mesmo.`);
+        const successorClient = new DHTClient(this.successor.ip, this.successor.port);
+        await successorClient.nodeGone(this.id, this.successor.ip, this.successor.port);  // Sucessor deve se tornar seu próprio predecessor
+      }
+
+      // Transfere os dados para o sucessor antes de sair
       await this.transferDataToSuccessor();
-      this.successor.predecessor = this.predecessor;
+
+      console.log(`(API DHT) LEAVE - Nó ${this.id} notificou seu sucessor ${this.successor.id} sobre sua saída.`);
     }
+
+    // Finaliza o processo de saída, removendo referências ao anel
+    this.successor = this;
+    this.predecessor = null;
   }
 
   async store(key: Key, value: string | Uint8Array): Promise<void> {
@@ -382,10 +396,10 @@ class DHTServiceImpl implements IDHTServiceServer {
   async nodeGone(call: grpc.ServerUnaryCall<NodeGoneRequest, Empty>, callback: grpc.sendUnaryData<Empty>): Promise<void> {
     const request = call.request;
 
-    console.log('(API GRPC)', `NODE_GONE - Recebido NODE_GONE de ${request.getIp()}:${request.getPort()}`);
+    console.log('(API GRPC)', `NODE_GONE - Recebido NODE_GONE do nó ${request.getNodeid()} indicando que ${request.getIp()}:${request.getPort()} é o novo predecessor.`);
 
-    this.node.successor = this.node.createNode(request.getIp(), request.getPort());
-    this.node.successor.predecessor = this.node;
+    // Atualiza o predecessor do nó sucessor para apontar para o novo predecessor
+    this.node.predecessor = this.node.createNode(request.getIp(), request.getPort());
 
     callback(null, new Empty());
   }
