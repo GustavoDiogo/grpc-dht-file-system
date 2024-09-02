@@ -220,12 +220,11 @@ export class Node {
         await successorClient.newNode(this.ip, this.port);
 
         if (joinResponse.getPredecessorip()) {
-          this.predecessor = this.createNode(joinResponse.getPredecessorip(), joinResponse.getPredecessorport(), joinResponse.getNodeid());
+          this.predecessor = this.createNode(joinResponse.getPredecessorip(), joinResponse.getPredecessorport());
         } else {
-          this.predecessor = this.successor;  // Se não houver predecessor, o próprio sucessor se torna o predecessor
+          this.predecessor = null;
         }
 
-        console.log(`(API DHT) JOIN - Nó ${this.ip}:${this.port} definido com predecessor ${this.predecessor?.ip}:${this.predecessor?.port} e sucessor ${this.successor?.ip}:${this.successor?.port}`);
         await this.transferDataToNewNode();
         break;
       }
@@ -233,37 +232,26 @@ export class Node {
   }
 
   async leave(): Promise<void> {
-    if (this.predecessor && this.successor && this.predecessor.id !== this.id && this.successor.id !== this.id) {
-      // Notifica o predecessor para atualizar o sucessor
+    if (this.predecessor) {
       const predecessorClient = new DHTClient(this.predecessor.ip, this.predecessor.port);
       await predecessorClient.nodeGone(this.id, this.successor.ip, this.successor.port);
-
-      // Notifica o sucessor para atualizar o predecessor
-      const successorClient = new DHTClient(this.successor.ip, this.successor.port);
-      await successorClient.newNode(this.predecessor.ip, this.predecessor.port);
-
-      // Transfere todos os dados do nó atual para o sucessor
+    }
+    if (this.successor) {
       await this.transferDataToSuccessor();
-
-      console.log(`(API DHT) Nó ${this.ip}:${this.port} saiu da rede. Predecessor atualizado para ${this.predecessor.ip}:${this.predecessor.port}, Sucessor atualizado para ${this.successor.ip}:${this.successor.port}`);
-    } else {
-      console.log('(API DHT) Nó é o único na rede ou não possui um predecessor/sucessor válido.');
+      this.successor.predecessor = this.predecessor;
     }
   }
 
   async store(key: Key, value: string | Uint8Array): Promise<void> {
     const node = await this.findSuccessor(this.hashKey(key));
-
-    // Se o nó é seu próprio sucessor, ou não tem outros nós para redirecionar, armazene localmente ou interrompa
-    if (node.id === this.id) {
-      this.data.set(key, Buffer.from(value));
-      console.log('(API DHT)', `STORE - Chave ${key} armazenada localmente no nó ${this.ip}:${this.port}`);
-    } else if (node.ip === this.ip && node.port === this.port) {
-      console.log('(API DHT)', `STORE - Loop detectado ao tentar armazenar chave ${key}. Operação abortada.`);
-    } else {
+    
+    if (node.id !== this.id) {
       const client = new DHTClient(node.ip, node.port);
       await client.store(key, Buffer.from(value));
-      console.log('(API DHT)', `STORE - Chave ${key} armazenada no nó ${node.ip}:${node.port}`);
+      console.log('(API DHT)', `STORE - Chave ${key} armazenada exteriormente no nó ${node.ip}:${node.port}`);
+    } else {
+      this.data.set(key, Buffer.from(value));
+      console.log('(API DHT)', `STORE - Chave ${key} armazenada localmente no nó ${this.ip}:${this.port}`);
     }
   }
 
@@ -272,49 +260,27 @@ export class Node {
       console.log('(API DHT)', `RETRIEVE - Chave ${key} encontrada localmente.`);
       return this.data.get(key) || null;
     } else {
-      // Se o nó é seu próprio sucessor, ou não tem outros nós para redirecionar, isso indica que a chave não pode ser encontrada
-      if (this.successor.id === this.id) {
-        console.log('(API DHT)', `RETRIEVE - Chave ${key} não encontrada. Nenhum sucessor válido.`);
-        return null;
-      }
-
       const successor = await this.findSuccessor(this.hashKey(key));
-      if (successor.id === this.id || (successor.ip === this.ip && successor.port === this.port)) {
-        console.log('(API DHT)', `RETRIEVE - Chave ${key} não encontrada em nenhum nó. Interrompendo.`);
+      if (successor.id !== this.id) {
+        console.log('(API DHT)', `RETRIEVE - Chave ${key} encontrada exteriormente no nó ${successor.ip}:${successor.port}`);
+        const client = new DHTClient(successor.ip, successor.port);
+        return client.retrieve(key).then(response => response.getValue_asU8()).catch(() => null);
+      } else {
+        console.log('(API DHT)', `RETRIEVE - Chave ${key} não encontrada em nenhum nó.`);
         return null;
       }
-
-      const client = new DHTClient(successor.ip, successor.port);
-      return client.retrieve(key).then(response => {
-        if (response.getValue_asU8().length === 0) {
-          console.log('(API DHT)', `RETRIEVE - Chave ${key} não encontrada após consulta ao sucessor.`);
-          return null;
-        }
-        return response.getValue_asU8();
-      }).catch(() => {
-        console.log('(API DHT)', `RETRIEVE - Erro ao tentar recuperar a chave ${key} de ${successor.ip}:${successor.port}`);
-        return null;
-      });
     }
   }
 
   private async findSuccessor(id: NodeId, currentNode: Node = this): Promise<Node> {
-    if (this.successor.id === this.id) {
-      return this; // Evita ciclos infinitos
-    }
-
     if (this.between(id, currentNode.id, currentNode.successor.id)) {
       return currentNode.successor;
-    } else {
+    } else if (currentNode.successor.id !== this.id) {
       const client = new DHTClient(currentNode.successor.ip, currentNode.successor.port);
       const joinResponse = await client.findSuccessor(this.ip, this.port, id);
-
-      if (joinResponse.getSuccessorip() === this.ip && joinResponse.getSuccessorport() === this.port) {
-        console.log('(API DHT)', 'Loop detectado no findSuccessor. Retornando nó atual para evitar ciclo.');
-        return this;
-      }
-
       return this.createNode(joinResponse.getSuccessorip(), joinResponse.getSuccessorport(), joinResponse.getNodeid());
+    } else {
+      return this;
     }
   }
 
@@ -363,7 +329,7 @@ export class Node {
 }
 
 // Implementação do servidor gRPC
-// @ts-ignore
+// @ts-ignore 
 class DHTServiceImpl implements IDHTServiceServer {
   private node: Node;
 
@@ -416,15 +382,13 @@ class DHTServiceImpl implements IDHTServiceServer {
   async nodeGone(call: grpc.ServerUnaryCall<NodeGoneRequest, Empty>, callback: grpc.sendUnaryData<Empty>): Promise<void> {
     const request = call.request;
 
-    console.log(`(API GRPC) NODE_GONE - Nó ${request.getNodeid()} saiu da rede. Atualizando sucessor para ${request.getIp()}:${request.getPort()}`);
+    console.log('(API GRPC)', `NODE_GONE - Recebido NODE_GONE de ${request.getIp()}:${request.getPort()}`);
 
-    // Atualiza o sucessor do nó atual para o nó informado na mensagem NODE_GONE
     this.node.successor = this.node.createNode(request.getIp(), request.getPort());
     this.node.successor.predecessor = this.node;
 
     callback(null, new Empty());
   }
-
 
   async store(call: grpc.ServerUnaryCall<StoreRequest, Empty>, callback: grpc.sendUnaryData<Empty>): Promise<void> {
     const request = call.request;
@@ -480,8 +444,7 @@ class DHTServiceImpl implements IDHTServiceServer {
   async findSuccessor(call: grpc.ServerUnaryCall<JoinRequest, JoinResponse>, callback: grpc.sendUnaryData<JoinResponse>): Promise<void> {
     const request = call.request;
 
-    // Para fins de debug
-    // console.log(`Recebido findSuccessor para ${request.getNodeid()} de ${request.getIp()}:${request.getPort()}`);
+    console.log(`Recebido findSuccessor para ${request.getNodeid()} de ${request.getIp()}:${request.getPort()}`);
 
     let successorNode: Node = this.node.successor;
     if (this.node.between(request.getNodeid(), this.node.id, this.node.successor.id)) {
