@@ -33,9 +33,10 @@ if [ -n "$(command -v nvm)" ]; then
   echo -e "${OK_EMOJI_TEXT}"
 fi
 
-echo -e "${YELLOW}Installing Node.js dependencies...${RESET}"
+echo -e "${YELLOW}Installing Node.js root dependencies...${RESET}"
 npm i
 cd app 
+echo -e "${YELLOW}Installing Node.js app dependencies...${RESET}"
 npm i
 cd ..
 echo -e "${OK_EMOJI_TEXT}"
