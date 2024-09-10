@@ -1,3 +1,5 @@
+app/src/retrieved_files/*
+
 # Logs
 logs
 *.log
