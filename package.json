@@ -26,6 +26,7 @@
   "scripts": {
     "generate": "sh scripts/generateProto.sh",
     "simulate": "nodemon --watch 'app/src/' --exec 'ts-node app/src/simulate.ts' -e ts,js",
+    "start": "ts-node app/src/index.ts",
     "test": "jest"
   },
   "keywords": [

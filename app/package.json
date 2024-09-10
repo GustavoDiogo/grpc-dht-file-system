@@ -21,6 +21,7 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
-    "@grpc/grpc-js": "^1.11.1"
+    "@grpc/grpc-js": "^1.11.1",
+    "inquirer": "^10.2.2"
   }
 }

@@ -1,6 +1,7 @@
-import {  Node, startServer, DHTClient } from './index';
-
 import fs from 'fs';
+import { Node } from './node';
+import { startServer } from './startServer';
+import { DHTClient } from './DHTClient';
 
 const nodes: Node[] = [];
 
