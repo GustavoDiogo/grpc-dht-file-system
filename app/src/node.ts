@@ -129,7 +129,7 @@ export class Node {
     }
   }
 
-  private async findSuccessor(id: NodeId, currentNode: Node = this): Promise<Node> {
+  async findSuccessor(id: NodeId, currentNode: Node = this): Promise<Node> {
     if (this.between(id, currentNode.id, currentNode.successor.id)) {
       return currentNode.successor;
     } else if (currentNode.successor.id !== this.id) {
@@ -141,7 +141,7 @@ export class Node {
     }
   }
 
-  private async transferDataToNewNode(): Promise<void> {
+  async transferDataToNewNode(): Promise<void> {
     const keysToTransfer: Key[] = [];
     for (const [key, value] of this.data.entries()) {
       if (this.between(this.hashKey(key), this.id, this.successor.id)) {
@@ -166,7 +166,7 @@ export class Node {
     }
   }
 
-  private async transferDataToSuccessor(): Promise<void> {
+  public async transferDataToSuccessor(): Promise<void> {
     const dataToTransfer: KeyValue[] = [];
     for (const [key, value] of this.data.entries()) {
       const keyValue = new KeyValue();

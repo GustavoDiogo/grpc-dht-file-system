@@ -78,6 +78,8 @@ async function simulateNodes() {
     if (!notFoundValue) {
       console.log('(SCRIPT) Chave key3 não encontrada');
     }
+    console.warn('Teste de integração finalizado, verifique os resultados.');
+    process.exit(0);  // Encerra o processo do Node.js
   } catch (error) {
     console.error('(SCRIPT) Erro na simulação dos nós:', error);
   }
