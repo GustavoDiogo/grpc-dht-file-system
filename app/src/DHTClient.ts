@@ -13,7 +13,7 @@ import {
   KeyValue,
 } from './proto/dht_pb';
 
-// Implementação do cliente gRPC
+// gRPC Client Implementation
 export class DHTClient {
   private client: DHTServiceClient;
   
@@ -156,6 +156,4 @@ export class DHTClient {
       });
     });
   }
-  
 }
-  

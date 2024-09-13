@@ -8,8 +8,8 @@ jest.mock('../node', () => {
   };
 });
 
-describe('Operação de Saída do Nó (leave)', () => {
-  it('deve executar a operação de saída corretamente', async () => {
+describe('Node Leave Operation', () => {
+  it('should execute the leave operation correctly', async () => {
     const node = new Node('127.0.0.1', 5001);
 
     await node.leave();

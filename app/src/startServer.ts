@@ -3,7 +3,7 @@ import { Node } from './node';
 import { DHTService } from './DHTService';
 import { DHTServiceService } from './proto/dht_grpc_pb';
 
-// Função principal para iniciar o servidor gRPC
+// Main function to start the gRPC server
 export function startServer(node: Node) {
   const server = new grpc.Server();
   // @ts-ignore
@@ -14,6 +14,6 @@ export function startServer(node: Node) {
       console.error(err);
       return;
     }
-    console.log('(API GRPC)', `Servidor DHT rodando em ${address}`);
+    console.log('(GRPC API)', `DHT server running at ${address}`);
   });
 }

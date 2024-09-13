@@ -4,28 +4,28 @@ jest.mock('../node', () => {
   return {
     Node: jest.fn().mockImplementation(() => ({
       store: jest.fn().mockResolvedValue(true),
-      retrieve: jest.fn().mockResolvedValue(Buffer.from('conteúdo_simulado')),
+      retrieve: jest.fn().mockResolvedValue(Buffer.from('simulated_content')),
       leave: jest.fn().mockResolvedValue(true),
     })),
   };
 });
 
-describe('Simulação de Interação entre Nós', () => {
-  it('deve permitir que vários nós armazenem e recuperem arquivos', async () => {
+describe('Node Interaction Simulation', () => {
+  it('should allow multiple nodes to store and retrieve files', async () => {
     const node1 = new Node('127.0.0.1', 5001);
     const node2 = new Node('127.0.0.1', 5002);
 
-    const chave = 'chave_arquivo';
-    const conteudo = 'Conteúdo do arquivo';
+    const key = 'file_key';
+    const content = 'File content';
 
-    await node1.store(chave, Buffer.from(conteudo));
-    await node2.retrieve(chave);
+    await node1.store(key, Buffer.from(content));
+    await node2.retrieve(key);
 
-    expect(node1.store).toHaveBeenCalledWith(chave, Buffer.from(conteudo));
-    expect(node2.retrieve).toHaveBeenCalledWith(chave);
+    expect(node1.store).toHaveBeenCalledWith(key, Buffer.from(content));
+    expect(node2.retrieve).toHaveBeenCalledWith(key);
   });
 
-  it('deve simular a saída de um nó e manter a rede', async () => {
+  it('should simulate a node leaving and maintain the network', async () => {
     const node1 = new Node('127.0.0.1', 5001);
     const node2 = new Node('127.0.0.1', 5002);
 

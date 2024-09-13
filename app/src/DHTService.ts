@@ -14,7 +14,7 @@ import {
 } from './proto/dht_pb';
 import { Node } from './node';
 
-// Implementação do DHT service para o servidor gRPC
+// Implementation of the DHT service for the gRPC server
 // @ts-ignore 
 export class DHTService implements IDHTServiceServer {
   private node: Node;
@@ -26,7 +26,7 @@ export class DHTService implements IDHTServiceServer {
   async join(call: grpc.ServerUnaryCall<JoinRequest, JoinResponse>, callback: grpc.sendUnaryData<JoinResponse>): Promise<void> {
     const request = call.request;
 
-    console.log('(API GRPC)', `JOIN_OK - Recebido JOIN de ${request.getIp()}:${request.getPort()}`);
+    console.log('(gRPC API)', `JOIN_OK - Received JOIN from ${request.getIp()}:${request.getPort()}`);
 
     await this.node.join([{ ip: request.getIp(), port: request.getPort() }]);
 
@@ -45,12 +45,12 @@ export class DHTService implements IDHTServiceServer {
   async newNode(call: grpc.ServerUnaryCall<NewNodeRequest, Empty>, callback: grpc.sendUnaryData<Empty>): Promise<void> {
     const request = call.request;
 
-    console.log('(API GRPC)', `NEW_NODE - Recebido NEW_NODE para ${request.getIp()}:${request.getPort()}`);
+    console.log('(gRPC API)', `NEW_NODE - Received NEW_NODE for ${request.getIp()}:${request.getPort()}`);
 
     const newNode = this.node.createNode(request.getIp(), request.getPort());
     newNode.successor = this.node;
     
-    // Atualiza o predecessor do nó atual
+    // Update the current node's predecessor
     this.node.predecessor = newNode;
 
     callback(null, new Empty());
@@ -59,7 +59,7 @@ export class DHTService implements IDHTServiceServer {
   async leave(call: grpc.ServerUnaryCall<LeaveRequest, Empty>, callback: grpc.sendUnaryData<Empty>): Promise<void> {
     const request = call.request;
 
-    console.log('(API GRPC)', `LEAVE - Recebido LEAVE de ${request.getIp()}:${request.getPort()}`);
+    console.log('(gRPC API)', `LEAVE - Received LEAVE from ${request.getIp()}:${request.getPort()}`);
 
     await this.node.leave();
     callback(null, new Empty());
@@ -68,9 +68,9 @@ export class DHTService implements IDHTServiceServer {
   async nodeGone(call: grpc.ServerUnaryCall<NodeGoneRequest, Empty>, callback: grpc.sendUnaryData<Empty>): Promise<void> {
     const request = call.request;
 
-    console.log('(API GRPC)', `NODE_GONE - Recebido NODE_GONE do nó ${request.getNodeid()} indicando que ${request.getIp()}:${request.getPort()} é o novo predecessor.`);
+    console.log('(gRPC API)', `NODE_GONE - Received NODE_GONE from node ${request.getNodeid()} indicating that ${request.getIp()}:${request.getPort()} is the new predecessor.`);
 
-    // Atualiza o predecessor do nó sucessor para apontar para o novo predecessor
+    // Update the successor node's predecessor to point to the new predecessor
     this.node.predecessor = this.node.createNode(request.getIp(), request.getPort());
 
     callback(null, new Empty());
@@ -82,12 +82,12 @@ export class DHTService implements IDHTServiceServer {
     const value = request.getValue();
 
     if (this.node.data.has(key)) {
-      console.log('(API GRPC)', `STORE - Chave ${key} já está armazenada. Ignorando a operação.`);
+      console.log('(gRPC API)', `STORE - Key ${key} is already stored. Ignoring operation.`);
       callback(null, new Empty());
       return;
     }
 
-    console.log('(API GRPC)', `STORE - Armazenando chave ${key} com valor de tamanho ${value.length}`);
+    console.log('(gRPC API)', `STORE - Storing key ${key} with value size ${value.length}`);
 
     await this.node.store(key, value);
     callback(null, new Empty());
@@ -97,18 +97,18 @@ export class DHTService implements IDHTServiceServer {
     const request = call.request;
     const key = request.getKey();
 
-    console.log('(API GRPC)', `RETRIEVE - Recebendo pedido para recuperar a chave ${key}`);
+    console.log('(gRPC API)', `RETRIEVE - Receiving request to retrieve key ${key}`);
 
     const value = await this.node.retrieve(key);
     const response = new RetrieveResponse();
 
     if (value) {
-      console.log('(API GRPC)', `OK - Chave ${key} encontrada.`);
+      console.log('(gRPC API)', `OK - Key ${key} found.`);
 
       response.setKey(key);
       response.setValue(value);
     } else {
-      console.log('(API GRPC)', `NOT_FOUND - Chave ${key} não encontrada.`);
+      console.log('(gRPC API)', `NOT_FOUND - Key ${key} not found.`);
       response.setValue(new Uint8Array());
     }
     
@@ -118,7 +118,7 @@ export class DHTService implements IDHTServiceServer {
   async transfer(call: grpc.ServerUnaryCall<TransferRequest, Empty>, callback: grpc.sendUnaryData<Empty>): Promise<void> {
     const request = call.request;
 
-    console.log('(API GRPC)', 'TRANSFER - Recebendo dados de transferência');
+    console.log('(gRPC API)', 'TRANSFER - Receiving transfer data');
 
     request.getPairsList().forEach((pair) => {
       this.node.data.set(pair.getKey(), pair.getValue_asU8());
@@ -130,7 +130,7 @@ export class DHTService implements IDHTServiceServer {
   async findSuccessor(call: grpc.ServerUnaryCall<JoinRequest, JoinResponse>, callback: grpc.sendUnaryData<JoinResponse>): Promise<void> {
     const request = call.request;
 
-    // console.log(`Recebido findSuccessor para ${request.getNodeid()} de ${request.getIp()}:${request.getPort()}`);
+    // console.log(`Received findSuccessor for ${request.getNodeid()} from ${request.getIp()}:${request.getPort()}`);
 
     let successorNode: Node = this.node.successor;
     if (this.node.between(request.getNodeid(), this.node.id, this.node.successor.id)) {
@@ -142,9 +142,8 @@ export class DHTService implements IDHTServiceServer {
     response.setSuccessorip(successorNode.ip);
     response.setSuccessorport(successorNode.port);
 
-    console.log('(API GRPC)', `JOIN_OK - Para o nó ingressante ${request.getIp()}:${request.getPort()} com o sucessor ${successorNode.ip}:${successorNode.port} ${this.node.predecessor ? 'e predecessor' + `${this.node.predecessor?.ip}:${this.node.predecessor?.port}` : ''}`);
+    console.log('(gRPC API)', `JOIN_OK - For the joining node ${request.getIp()}:${request.getPort()} with successor ${successorNode.ip}:${successorNode.port} ${this.node.predecessor ? 'and predecessor' + `${this.node.predecessor?.ip}:${this.node.predecessor?.port}` : ''}`);
     
     callback(null, response);
   }
-
 }

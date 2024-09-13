@@ -7,10 +7,6 @@
     "build": "tsc",
     "lint": "eslint . --ext .ts"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ufabc-bcc/2024-q2-sistemas-distribuidos-projeto-01-gustavo-renan.git"
-  },
   "keywords": [
     "grpc"
   ],

@@ -7,7 +7,7 @@ import { DHTClient } from './DHTClient';
 type NodeId = string;
 type Key = string;
 
-const M_BITS = 160; // Tamanho dos identificadores e chaves em bits
+const M_BITS = 160; // Size of identifiers and keys in bits
 
 export class Node {
   id: NodeId;
@@ -26,7 +26,7 @@ export class Node {
     this.ip = ip;
     this.port = port;
     this.id = id ?? this.generateRandomId();
-    this.successor = this; // Inicialmente, o nó aponta para si mesmo
+    this.successor = this; // Initially, the node points to itself
   }
 
   private generateRandomId(): NodeId {
@@ -47,18 +47,18 @@ export class Node {
 
   async join(knownHosts: { ip: string; port: number }[]): Promise<void> {
     if (knownHosts.length === 0) {
-      console.log('(API DHT)', `JOIN - Nenhum nó conhecido. Inicializando a rede para ${this.ip}:${this.port}.`);
+      console.log('(DHT API)', `JOIN - No known nodes. Initializing the network for ${this.ip}:${this.port}.`);
       this.predecessor = null;
       this.successor = this;
     } else {
-      console.log('(API DHT)', `JOIN - Recebido pedido de JOIN para ${this.ip}:${this.port} de ${knownHosts.map(host => `${host.ip}:${host.port}`).join(', ')}`);
+      console.log('(DHT API)', `JOIN - Received JOIN request for ${this.ip}:${this.port} from ${knownHosts.map(host => `${host.ip}:${host.port}`).join(', ')}`);
       for (const host of knownHosts) {
         const client = new DHTClient(host.ip, host.port);
-        const joinResponse = await client.findSuccessor(this.ip, this.port, this.id); // Novo método findSuccessor
+        const joinResponse = await client.findSuccessor(this.ip, this.port, this.id); // New findSuccessor method
 
         this.successor = this.createNode(joinResponse.getSuccessorip(), joinResponse.getSuccessorport(), joinResponse.getNodeid());
 
-        // Atualiza o predecessor do sucessor para este nó
+        // Update the successor's predecessor to this node
         const successorClient = new DHTClient(this.successor.ip, this.successor.port);
         await successorClient.newNode(this.ip, this.port);
 
@@ -76,25 +76,25 @@ export class Node {
 
   async leave(): Promise<void> {
     if (this.successor && this.successor.id !== this.id) {
-      // Verifica se o predecessor não é nulo antes de enviar a mensagem NODE_GONE
+      // Check if the predecessor is not null before sending the NODE_GONE message
       if (this.predecessor) {
-        // Notifica o sucessor que este nó está saindo e informa quem será o novo predecessor
+        // Notify the successor that this node is leaving and inform who will be the new predecessor
         const successorClient = new DHTClient(this.successor.ip, this.successor.port);
         await successorClient.nodeGone(this.id, this.predecessor.ip, this.predecessor.port);
       } else {
-        // Se o predecessor é nulo, o sucessor deve ser o único nó na rede após a saída
-        console.log(`(API DHT) LEAVE - Nó ${this.id} está saindo e não tem predecessor, atualizando sucessor para si mesmo.`);
+        // If the predecessor is null, the successor should be the only node in the network after the exit
+        console.log(`(DHT API) LEAVE - Node ${this.id} is leaving and has no predecessor, updating successor to itself.`);
         const successorClient = new DHTClient(this.successor.ip, this.successor.port);
-        await successorClient.nodeGone(this.id, this.successor.ip, this.successor.port);  // Sucessor deve se tornar seu próprio predecessor
+        await successorClient.nodeGone(this.id, this.successor.ip, this.successor.port);  // Successor should become its own predecessor
       }
 
-      // Transfere os dados para o sucessor antes de sair
+      // Transfer the data to the successor before leaving
       await this.transferDataToSuccessor();
 
-      console.log(`(API DHT) LEAVE - Nó ${this.id} notificou seu sucessor ${this.successor.id} sobre sua saída.`);
+      console.log(`(DHT API) LEAVE - Node ${this.id} notified its successor ${this.successor.id} about its departure.`);
     }
 
-    // Finaliza o processo de saída, removendo referências ao anel
+    // Finalize the leaving process by removing references to the ring
     this.successor = this;
     this.predecessor = null;
   }
@@ -105,25 +105,25 @@ export class Node {
     if (node.id !== this.id) {
       const client = new DHTClient(node.ip, node.port);
       await client.store(key, Buffer.from(value));
-      console.log('(API DHT)', `STORE - Chave ${key} armazenada exteriormente no nó ${node.ip}:${node.port}`);
+      console.log('(DHT API)', `STORE - Key ${key} stored externally on node ${node.ip}:${node.port}`);
     } else {
       this.data.set(key, Buffer.from(value));
-      console.log('(API DHT)', `STORE - Chave ${key} armazenada localmente no nó ${this.ip}:${this.port}`);
+      console.log('(DHT API)', `STORE - Key ${key} stored locally on node ${this.ip}:${this.port}`);
     }
   }
 
   async retrieve(key: Key): Promise<Uint8Array | null> {
     if (this.data.has(key)) {
-      console.log('(API DHT)', `RETRIEVE - Chave ${key} encontrada localmente.`);
+      console.log('(DHT API)', `RETRIEVE - Key ${key} found locally.`);
       return this.data.get(key) || null;
     } else {
       const successor = await this.findSuccessor(this.hashKey(key));
       if (successor.id !== this.id) {
-        console.log('(API DHT)', `RETRIEVE - Chave ${key} encontrada exteriormente no nó ${successor.ip}:${successor.port}`);
+        console.log('(DHT API)', `RETRIEVE - Key ${key} found externally on node ${successor.ip}:${successor.port}`);
         const client = new DHTClient(successor.ip, successor.port);
         return client.retrieve(key).then(response => response.getValue_asU8()).catch(() => null);
       } else {
-        console.log('(API DHT)', `RETRIEVE - Chave ${key} não encontrada em nenhum nó.`);
+        console.log('(DHT API)', `RETRIEVE - Key ${key} not found on any node.`);
         return null;
       }
     }

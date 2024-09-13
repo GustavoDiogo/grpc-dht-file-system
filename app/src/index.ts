@@ -6,21 +6,21 @@ import path from 'path';
 
 const nodes: Node[] = [];
 
-// Função para exibir o menu principal
+// Function to display the main menu
 async function showMainMenu() {
   const choices = [
-    { name: 'Criar um novo nó', value: 'create_node' },
-    { name: 'Enviar arquivo', value: 'send_file' },
-    { name: 'Recuperar arquivo por chave', value: 'retrieve_file' },
-    { name: 'Encerrar um nó', value: 'close_node' }, // Nova opção para encerrar um nó
-    { name: 'Sair', value: 'exit' },
+    { name: 'Create a new node', value: 'create_node' },
+    { name: 'Send file', value: 'send_file' },
+    { name: 'Retrieve file by key', value: 'retrieve_file' },
+    { name: 'Close a node', value: 'close_node' }, // New option to close a node
+    { name: 'Exit', value: 'exit' },
   ];
   
   const { option } = await inquirer.prompt([
     {
       type: 'list',
       name: 'option',
-      message: 'Selecione uma opção:',
+      message: 'Select an option:',
       choices,
     },
   ]);
@@ -28,33 +28,33 @@ async function showMainMenu() {
   return option;
 }
   
-// Função para criar um nó
+// Function to create a node
 async function createNode() {
   const { port } = await inquirer.prompt([
-    { type: 'input', name: 'port', message: 'Digite a porta do nó:' },
+    { type: 'input', name: 'port', message: 'Enter the node port:' },
   ]);
   
-  const ip = '127.0.0.1'; // IP fixo
+  const ip = '127.0.0.1'; // Fixed IP
   const node = new Node(ip, parseInt(port));
   
   if (nodes.length > 0) {
-    // Se já houver nós, juntar-se ao primeiro nó da lista
+    // If there are already nodes, join the first node in the list
     const knownHosts = [{ ip: nodes[0].ip, port: nodes[0].port }];
     await node.join(knownHosts);
-    console.log(`Nó ${ip}:${port} juntou-se à rede por meio do nó ${nodes[0].ip}:${nodes[0].port}`);
+    console.log(`Node ${ip}:${port} joined the network through node ${nodes[0].ip}:${nodes[0].port}`);
   } else {
-    console.log(`Nó ${ip}:${port} inicializado como o nó inicial da rede.`);
+    console.log(`Node ${ip}:${port} initialized as the initial node of the network.`);
   }
   
-  await startServer(node); // Inicia o servidor gRPC
+  await startServer(node); // Start the gRPC server
   nodes.push(node);
-  console.log(`Nó criado em ${ip}:${port}`);
+  console.log(`Node created at ${ip}:${port}`);
 }
   
-// Função para enviar um arquivo, permitindo escolher o servidor
+// Function to send a file, allowing you to choose the server
 async function sendFile() {
   if (nodes.length === 0) {
-    console.log('É necessário criar pelo menos 1 nó para enviar arquivos.');
+    console.log('You need to create at least 1 node to send files.');
     return;
   }
   
@@ -65,36 +65,36 @@ async function sendFile() {
     {
       type: 'list',
       name: 'nodeIndex',
-      message: 'Selecione o nó para enviar o arquivo:',
+      message: 'Select the node to send the file:',
       choices: nodes.map((node, index) => ({ name: `${node.ip}:${node.port}`, value: index })),
     },
     {
       type: 'list',
       name: 'fileName',
-      message: 'Selecione o arquivo para enviar:',
+      message: 'Select the file to send:',
       choices: files,
     },
     {
       type: 'input',
       name: 'customKey',
-      message: 'Digite a chave personalizada para o arquivo:',
+      message: 'Enter a custom key for the file:',
     },
   ]);
   
   const fileBuffer = fs.readFileSync(path.join(filePath, fileName));
-  const selectedNode = nodes[nodeIndex]; // Escolher o nó específico para enviar o arquivo
+  const selectedNode = nodes[nodeIndex]; // Choose the specific node to send the file
   
-  console.log(`Enviando o arquivo ${fileName} com a chave ${customKey} para ${selectedNode.ip}:${selectedNode.port}`);
+  console.log(`Sending file ${fileName} with key ${customKey} to ${selectedNode.ip}:${selectedNode.port}`);
     
   await selectedNode.store(customKey, fileBuffer);
   
-  console.log(`Arquivo ${fileName} armazenado na rede com a chave ${customKey}.`);
+  console.log(`File ${fileName} stored in the network with key ${customKey}.`);
 }
   
-// Função para recuperar arquivo a partir de uma chave, selecionando o nó
+// Function to retrieve a file by key, selecting the node
 async function retrieveFile() {
   if (nodes.length === 0) {
-    console.log('Nenhum nó disponível para recuperação de arquivos.');
+    console.log('No node available to retrieve files.');
     return;
   }
   
@@ -102,33 +102,33 @@ async function retrieveFile() {
     {
       type: 'list',
       name: 'nodeIndex',
-      message: 'Selecione o nó de onde recuperar o arquivo:',
+      message: 'Select the node from where to retrieve the file:',
       choices: nodes.map((node, index) => ({ name: `${node.ip}:${node.port}`, value: index })),
     },
     {
       type: 'input',
       name: 'key',
-      message: 'Digite a chave do arquivo (ex: page.html):',
+      message: 'Enter the file key (e.g., page.html):',
     },
   ]);
   
-  const selectedNode = nodes[nodeIndex]; // Seleciona o nó escolhido pelo usuário
+  const selectedNode = nodes[nodeIndex]; // Select the node chosen by the user
   
   const retrievedFile = await selectedNode.retrieve(key);
     
   if (retrievedFile) {
     const filePath = path.join(__dirname, 'retrieved_files', key);
     fs.writeFileSync(filePath, Buffer.from(retrievedFile));
-    console.log(`Arquivo ${key} recuperado com sucesso e salvo em ${filePath}`);
+    console.log(`File ${key} successfully retrieved and saved at ${filePath}`);
   } else {
-    console.log('Erro: Arquivo não encontrado.');
+    console.log('Error: File not found.');
   }
 }
   
-// Função para encerrar um nó e executar o leave
+// Function to close a node and perform the leave operation
 async function closeNode() {
   if (nodes.length === 0) {
-    console.log('Nenhum nó disponível para encerrar.');
+    console.log('No node available to close.');
     return;
   }
   
@@ -136,23 +136,23 @@ async function closeNode() {
     {
       type: 'list',
       name: 'nodeIndex',
-      message: 'Selecione o nó para encerrar:',
+      message: 'Select the node to close:',
       choices: nodes.map((node, index) => ({ name: `${node.ip}:${node.port}`, value: index })),
     },
   ]);
   
-  const selectedNode = nodes[nodeIndex]; // Seleciona o nó escolhido pelo usuário
+  const selectedNode = nodes[nodeIndex]; // Select the node chosen by the user
   
-  console.log(`Encerrando o nó ${selectedNode.ip}:${selectedNode.port}...`);
+  console.log(`Closing node ${selectedNode.ip}:${selectedNode.port}...`);
     
-  await selectedNode.leave();  // Executa a operação leave no nó
+  await selectedNode.leave();  // Perform the leave operation on the node
   
-  nodes.splice(nodeIndex, 1); // Remove o nó da lista de nós ativos
+  nodes.splice(nodeIndex, 1); // Remove the node from the list of active nodes
   
-  console.log(`Nó ${selectedNode.ip}:${selectedNode.port} foi encerrado e removido da rede.`);
+  console.log(`Node ${selectedNode.ip}:${selectedNode.port} has been closed and removed from the network.`);
 }
   
-// Função principal para rodar o menu
+// Main function to run the menu
 async function runMenu() {
   let exit = false;
   while (!exit) {
@@ -164,16 +164,16 @@ async function runMenu() {
       case 'send_file':
         await sendFile();
         break;
-      case 'retrieve_file':  // Chamada para recuperar arquivo por chave, escolhendo nó
+      case 'retrieve_file':  // Call to retrieve file by key, selecting node
         await retrieveFile();
         break;
-      case 'close_node':  // Chamada para encerrar um nó (leave)
+      case 'close_node':  // Call to close a node (leave)
         await closeNode();
         break;
       case 'exit':
-        console.log('Encerrando o programa...');
+        console.log('Exiting the program...');
         exit = true;
-        process.exit(0);  // Encerra o processo do Node.js
+        process.exit(0);  // Exits the Node.js process
         break;
     }
   }

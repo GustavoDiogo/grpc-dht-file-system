@@ -4,29 +4,29 @@ jest.mock('../node', () => {
   return {
     Node: jest.fn().mockImplementation(() => ({
       store: jest.fn().mockResolvedValue(true),
-      retrieve: jest.fn().mockResolvedValue(Buffer.from('conteúdo_simulado')),
+      retrieve: jest.fn().mockResolvedValue(Buffer.from('simulated_content')),
     })),
   };
 });
-  
-describe('Armazenamento e Recuperação no Nó', () => {
-  it('deve armazenar um arquivo com uma chave no nó', async () => {
+
+describe('Node Storage and Retrieval', () => {
+  it('should store a file with a key on the node', async () => {
     const node = new Node('127.0.0.1', 5001);
-    const chave = 'chave_teste';
-    const valor = 'Conteúdo do arquivo';
+    const key = 'test_key';
+    const value = 'File content';
   
-    await node.store(chave, Buffer.from(valor));
+    await node.store(key, Buffer.from(value));
   
-    expect(node.store).toHaveBeenCalledWith(chave, Buffer.from(valor));
+    expect(node.store).toHaveBeenCalledWith(key, Buffer.from(value));
   });
   
-  it('deve recuperar um arquivo pela chave', async () => {
+  it('should retrieve a file by key', async () => {
     const node = new Node('127.0.0.1', 5001);
-    const chave = 'chave_teste';
+    const key = 'test_key';
   
-    const valorRecuperado = await node.retrieve(chave);
+    const retrievedValue = await node.retrieve(key);
   
-    expect(node.retrieve).toHaveBeenCalledWith(chave);
-    expect(valorRecuperado).toEqual(Buffer.from('conteúdo_simulado'));
+    expect(node.retrieve).toHaveBeenCalledWith(key);
+    expect(retrievedValue).toEqual(Buffer.from('simulated_content'));
   });
 });
