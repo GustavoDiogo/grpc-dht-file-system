@@ -94,15 +94,15 @@ async function sendFile() {
 // Function to retrieve a file by key, selecting the node
 async function retrieveFile() {
   if (nodes.length === 0) {
-    console.log('No node available to retrieve files.');
+    console.log('No node available for file recovery.');
     return;
   }
-  
+
   const { nodeIndex, key } = await inquirer.prompt([
     {
       type: 'list',
       name: 'nodeIndex',
-      message: 'Select the node from where to retrieve the file:',
+      message: 'Select the node to retrieve the file from:',
       choices: nodes.map((node, index) => ({ name: `${node.ip}:${node.port}`, value: index })),
     },
     {
@@ -111,17 +111,28 @@ async function retrieveFile() {
       message: 'Enter the file key (e.g., page.html):',
     },
   ]);
-  
+
   const selectedNode = nodes[nodeIndex]; // Select the node chosen by the user
-  
-  const retrievedFile = await selectedNode.retrieve(key);
-    
-  if (retrievedFile) {
-    const filePath = path.join(__dirname, 'retrieved_files', key);
-    fs.writeFileSync(filePath, Buffer.from(retrievedFile));
-    console.log(`File ${key} successfully retrieved and saved at ${filePath}`);
-  } else {
-    console.log('Error: File not found.');
+
+  try {
+    const retrievedFile = await selectedNode.retrieve(key);
+
+    if (retrievedFile) {
+      const directoryPath = path.join(__dirname, 'retrieved_files');
+
+      // Check if the directory exists, if not, create it
+      if (!fs.existsSync(directoryPath)) {
+        fs.mkdirSync(directoryPath, { recursive: true });
+      }
+
+      const filePath = path.join(directoryPath, key);
+      fs.writeFileSync(filePath, Buffer.from(retrievedFile));
+      console.log(`File ${key} successfully retrieved and saved at ${filePath}`);
+    } else {
+      console.log(`Error: File with key "${key}" not found.`);
+    }
+  } catch (err: any) {
+    console.error(`Error trying to retrieve the file: ${err?.message}`);
   }
 }
   
